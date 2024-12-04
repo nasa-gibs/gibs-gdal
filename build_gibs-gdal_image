@@ -1,0 +1,15 @@
+#!/bin/sh
+
+# Detect CPU architecture
+ARCH=$(uname -m)
+DOCKER_PLATFORM_OPTION=""
+
+if [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then
+    DOCKER_PLATFORM_OPTION="--platform=linux/amd64"
+fi
+
+# Build the _gdal_dev image
+docker build \
+    $DOCKER_PLATFORM_OPTION \
+    -f ./docker/Dockerfile \
+    -t gibs/gibs-gdal:v01 \
