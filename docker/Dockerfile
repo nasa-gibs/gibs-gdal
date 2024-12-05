@@ -39,7 +39,7 @@ RUN dnf -y update && \
 WORKDIR /tmp
 RUN rpmdev-setuptree
 # Copy SPEC file
-COPY gdal.spec /root/rpmbuild/SPECS/
+COPY ../../rpmbuild/SPEC/gdal.spec /root/rpmbuild/SPECS/
 # Build the RPM
 RUN rpmbuild -bb --clean /root/rpmbuild/SPECS/gdal.spec
 # Copy the built RPM to the output directory
