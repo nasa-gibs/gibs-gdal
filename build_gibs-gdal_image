@@ -10,6 +10,8 @@ fi
 
 # Build the _gdal_dev image
 docker build \
+    --no-cache \
     $DOCKER_PLATFORM_OPTION \
     -f ./docker/Dockerfile \
     -t gibs/gibs-gdal:v01 \
+    .
