@@ -39,4 +39,4 @@ This project simplifies the process of building GDAL with Brunsli support by:
     *Output Directory: Change the volume mount in the docker run command to specify a different output directory for the RPM package.
 
 ## License
-    *This project is licensed under the MIT License - see the LICENSE  file for details
+    *This project is licensed under the Apache License, Version 2.0 - see the LICENSE  file for details
