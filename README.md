@@ -20,7 +20,7 @@ This project simplifies the process of building GDAL with Brunsli support by:
 git clone\
 cd gdal-brunsli-rpm\
 docker build -t gdal-builder .\
-docker run -it -v $(pwd)/output:/output gdal-builder\
+docker run -it -v $(pwd)/output:/output gdal-builder
    
  ## RPM Installation
    sudo dnf install /path/to/gdal-3.6.4-1.el9.x86_64.rpm
