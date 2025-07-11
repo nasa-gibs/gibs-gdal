@@ -1,6 +1,6 @@
 Name: gdal
-Version: 3.6.4
-Release: 1%{?dist}
+Version: %{gdal_version}
+Release: %{gdal_release}%{?dist}
 Summary: Geospatial Data Abstraction Library
 License: MIT
 URL: https://gdal.org/
@@ -15,7 +15,7 @@ BuildRequires: make
 BuildRequires: cmake
 BuildRequires: jansson-devel
 BuildRequires: libpng-devel
-BuildRequires: pcre-devel
+BuildRequires: pcre2-devel
 BuildRequires: wget
 BuildRequires: libyaml-devel
 BuildRequires: libcurl-devel
