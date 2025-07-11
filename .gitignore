@@ -1,0 +1,20 @@
+# Ignore the dist directory where extracted RPMs are stored
+dist/
+
+# Common OS files to ignore
+.DS_Store
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Build artifacts
+*.o
+*.so
+*.a
+*.pyc
+__pycache__/
