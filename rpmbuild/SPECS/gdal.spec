@@ -6,10 +6,13 @@ License: MIT
 URL: https://gdal.org/
 
 Source0: http://download.osgeo.org/gdal/%{version}/gdal-%{version}.tar.gz
-Source1: https://github.com/google/brunsli.git  # Brunsli source
+Source1: https://github.com/google/brunsli.git
 
 %define debug_package %{nil}
 
+# Add python3-numpy to ensure bindings are built with array support
+BuildRequires: python3-numpy
+BuildRequires: python3-devel
 BuildRequires: gcc
 BuildRequires: make
 BuildRequires: cmake
@@ -29,15 +32,14 @@ BuildRequires: harfbuzz-devel
 BuildRequires: fcgi-devel
 BuildRequires: proj-devel
 BuildRequires: geos-devel
-BuildRequires: python3-devel
 BuildRequires: protobuf-c-devel
 
 %description
 GDAL is a translator library for raster and vector geospatial data formats.
 
 %prep
-%setup -q -n gdal-%{version} -a 0
-# Explicitly download the source
+%setup -q -n gdal-%{version}
+# Explicitly download the source (if source0 fails or for redundancy)
 wget -O gdal-%{version}.tar.gz http://download.osgeo.org/gdal/%{version}/gdal-%{version}.tar.gz
 export LD_LIBRARY_PATH=:/usr/local/lib:$LD_LIBRARY_PATH
 
@@ -85,30 +87,34 @@ cmake -DCMAKE_BUILD_TYPE=Release \
       ..
 
 cmake --build .
+# Note: "target install" here installs to the Docker build container /usr/local
+# This is needed so ldconfig works and subsequent checks pass
 cmake --build . --config Release --target install
 ldconfig
 popd
 
 %install
 pushd build
-cmake --install . --prefix %{buildroot}%{_prefix}
-pip install --global-option=build_ext --global-option="-I/usr/local/include/gdal" GDAL==`gdal-config --version`
+# Explicitly install to /usr/local inside the buildroot
+cmake --install . --prefix %{buildroot}/usr/local
+
+# Removed the manual "pip install" line. 
+# CMake -DBUILD_PYTHON_BINDINGS=ON handles this automatically.
+
+# Brunsli: Copy libraries and headers to the RPM buildroot
 mkdir -p %{buildroot}/usr/local/lib/
 mkdir -p %{buildroot}/usr/local/include/brunsli
-cp /usr/local/lib/libbrunsli*.so %{buildroot}/usr/local/lib/
-cp /usr/local/include/brunsli/* %{buildroot}/usr/local/include/brunsli/
+cp -a /usr/local/lib/libbrunsli*.so* %{buildroot}/usr/local/lib/
+cp -a /usr/local/include/brunsli/* %{buildroot}/usr/local/include/brunsli/
 popd
-
 
 %files
 %doc README.md
 %doc LICENSE.TXT
 
-/usr/bin/*
-/usr/lib/*
-/usr/lib/cmake/gdal/*
-/usr//include/*
-/usr/local/include/*
-/usr/local/include/brunsli/*
+# Capture all files installed to /usr/local
+/usr/local/bin/*
 /usr/local/lib/*
-/usr/share/*
+/usr/local/include/*
+/usr/local/share/*
+/usr/local/lib64/*

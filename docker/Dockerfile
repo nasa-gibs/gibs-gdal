@@ -8,80 +8,85 @@ ARG GDAL_RELEASE
 ENV GDAL_VERSION=$GDAL_VERSION \
     GDAL_RELEASE=$GDAL_RELEASE
 
-# Add AlmaLinux vault repositories to allow us to use libxml2-devel-2.9.13
-RUN cat > /etc/yum.repos.d/almalinux-vault.repo <<'EOF'
-[appstream-vault]
-name=AlmaLinux Vault 9.4 - AppStream
-# mirrorlist=https://mirrors.almalinux.org/mirrorlist/$releasever/appstream
-baseurl=https://repo.almalinux.org/vault/9.4/AppStream/$basearch/os/
-enabled=1
-gpgcheck=1
-countme=1
-gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-AlmaLinux-9
-
-[baseos-vault]
-name=AlmaLinux Vault 9.4 - BaseOS
-baseurl=https://repo.almalinux.org/vault/9.4/BaseOS/$basearch/os/
-enabled=1
-gpgcheck=1
-countme=1
-gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-AlmaLinux-9
-EOF
-
-ADD https://repo.almalinux.org/almalinux/RPM-GPG-KEY-AlmaLinux-9 /etc/pki/rpm-gpg/RPM-GPG-KEY-AlmaLinux-9
-
-RUN dnf install -y dnf-plugins-core
-# Install dependencies
-RUN dnf -y update && \
-    dnf groupinstall -y "Development Tools" && \
-    dnf clean all && \
+# Install EPEL and enable CRB
+RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-10.noarch.rpm && \
+    dnf install -y dnf-plugins-core && \
     dnf config-manager --set-enabled crb && \
-        dnf install -y epel-release && \
-    dnf install -y \
-        --enablerepo="appstream-vault" \
-        --enablerepo="baseos-vault" \
-        swig-4.3.0 \
-        rpm-build-4.19.1.1 \
-        rpmdevtools-9.6 \
-        jansson-devel-2.14 \
-        libpng-devel-1.6.40 \
-        pcre2-devel-10.44 \
-        wget-1.24.5 \
-        libyaml-devel-0.2.5 \
-        libcurl-devel-8.9.1 \
-        libjpeg-turbo-devel-3.0.2 \
-        libxml2-devel-2.9.13 \
-        cronie-1.7.0 \
-        logrotate-3.22.0 \
-        fribidi-devel-1.0.14 \
-        cairo-devel-1.18.2 \
-        cmake-3.30.5 \
-        harfbuzz-devel-8.4.0 \
-        fcgi-devel-2.4.0 \
-        proj-9.5.0 \
-        proj-devel-9.5.0 \
-        geos-3.13.0 \
-        geos-devel-3.13.0 \
-        python3-numpy-1.26.4 \
-        python3-devel-3.12.9 \
-        protobuf-c-devel-1.5.0 && \
-        dnf clean all
+    dnf clean all
 
-WORKDIR /tmp
-RUN rpmdev-setuptree
+# Install Build Dependencies
+# Added python3-setuptools and python3-wheel here so rpmbuild finds them in /usr/lib
+RUN dnf install -y \
+    rpmdevtools \
+    dnf-utils \
+    rpm-build \
+    gcc \
+    gcc-c++ \
+    make \
+    cmake \
+    swig \
+    wget \
+    git \
+    # GIS Dependencies
+    proj-devel \
+    geos-devel \
+    fribidi-devel \
+    cairo-devel \
+    harfbuzz-devel \
+    fcgi-devel \
+    protobuf-c-devel \
+    # Lib Dependencies
+    libpng-devel \
+    libjpeg-turbo-devel \
+    libcurl-devel \
+    libxml2-devel \
+    libyaml-devel \
+    jansson-devel \
+    pcre2-devel \
+    # Python & Utils
+    python3-devel \
+    python3-setuptools \
+    python3-wheel \
+    python3-pip \
+    cronie \
+    logrotate && \
+    dnf clean all
+
+# Python Environment Setup
+# Upgrade via pip and use PYTHONPATH to prioritize the pip version.
+
+RUN pip install --upgrade pip==25.3 && \
+    pip install numpy==1.26.4 "packaging>=25.0" setuptools wheel --ignore-installed
+
+# Setup RPM Build Tree
+WORKDIR /root
+RUN mkdir -p rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
+
 # Copy SPEC file
-COPY ../../rpmbuild/SPECS/gdal.spec /root/rpmbuild/SPECS/
-# Download source files
-RUN spectool -g -R --define "gdal_version $GDAL_VERSION" --define "gdal_release $GDAL_RELEASE" /root/rpmbuild/SPECS/gdal.spec
+COPY rpmbuild/SPECS/gdal.spec /root/rpmbuild/SPECS/
+
+# Ensure spectool is installed
+RUN dnf install -y rpmdevtools
+
+# 6. Download Source files
+RUN spectool -g \
+    --define "gdal_version $GDAL_VERSION" \
+    --define "gdal_release $GDAL_RELEASE" \
+    -C /root/rpmbuild/SOURCES \
+    /root/rpmbuild/SPECS/gdal.spec
+
 # Build the RPM
-RUN rpmbuild -bb --clean \
+# Set PYTHONPATH so rpmbuild prefers our pip-installed numpy/packaging in /usr/local
+ENV PYTHONPATH=/usr/local/lib64/python3.12/site-packages:/usr/local/lib/python3.12/site-packages
+
+RUN rpmbuild -bb --clean --nodeps \
     --define "gdal_version $GDAL_VERSION" \
     --define "gdal_release $GDAL_RELEASE" \
     /root/rpmbuild/SPECS/gdal.spec
+
 # Copy the built RPM to the output directory
 RUN mkdir -p ../output
 RUN cp /root/rpmbuild/RPMS/x86_64/*.rpm ../output
 
 WORKDIR /
 RUN rm -rf /tmp
-

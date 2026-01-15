@@ -1,8 +1,8 @@
 #!/bin/sh
 
 # GDAL version information
-export GDAL_VERSION="3.6.4"
-export GDAL_RELEASE="3"
+export GDAL_VERSION="3.12.1"
+export GDAL_RELEASE="1"
 
 # AlmaLinux version
 export ALMA_VERSION="10.0"
